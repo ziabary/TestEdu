@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model tblUser {
+  usrID              Int           @id @default(autoincrement())
+  usrPhone           String        @unique
+  usrName            String?
+  usrEmail           String?
+  usrAvatar          String?
+  usrGrade           Int?
+  usrQuestions       Int           @default(10)
+  usrCreatedBy_usrID Int?
+  usrCreatedDateTime DateTime      @default(now())
+  usrUpdatedBy_usrID Int?
+  usrUpdatedDateTime DateTime      @updatedAt
+  progress           tblProgress[]
+  chats              tblChat[]
+  accounts           tblAccount[]
+  sessions           tblSession[]
+  actionLogs         tblActionLogs[] @relation("ActionBy")
+  createdLogs        tblActionLogs[] @relation("CreatedBy")
+  updatedLogs        tblActionLogs[] @relation("UpdatedBy")
+}
+
+model tblProgress {
+  prgID              Int           @id @default(autoincrement())
+  prgUserID          Int
+  prgSubject         String
+  prgChapter         String
+  prgCompletion      Float
+  prgLastActivity    String
+  prgData            Json
+  prgCreatedBy_usrID Int
+  prgCreatedDateTime DateTime      @default(now())
+  prgUpdatedBy_usrID Int
+  prgUpdatedDateTime DateTime      @updatedAt
+  user               tblUser       @relation(fields: [prgUserID], references: [usrID])
+
+  @@unique([prgUserID, prgSubject, prgChapter])
+}
+
+model tblChat {
+  chtID              Int           @id @default(autoincrement())
+  chtUserID          Int
+  chtSessionID       String
+  chtSubject         String?
+  chtChapter         String?
+  chtQuestion        String
+  chtResponse        String
+  chtCost            Int           @default(1)
+  chtCreatedBy_usrID Int
+  chtCreatedDateTime DateTime      @default(now())
+  user               tblUser       @relation(fields: [chtUserID], references: [usrID])
+  session            tblSession    @relation(fields: [chtSessionID], references: [sesID])
+}
+
+model tblSession {
+  sesID              String        @id
+  sesUserID          Int
+  sesTitle           String?
+  sesCreatedDateTime DateTime      @default(now())
+  user               tblUser       @relation(fields: [sesUserID], references: [usrID])
+  chats              tblChat[]
+}
+
+model tblContent {
+  cntID              Int           @id @default(autoincrement())
+  cntSubject         String
+  cntChapter         String
+  cntType            String
+  cntData            Json
+  cntCreatedBy_usrID Int
+  cntCreatedDateTime DateTime      @default(now())
+  cntUpdatedBy_usrID Int
+  cntUpdatedDateTime DateTime      @updatedAt
+
+  @@unique([cntSubject, cntChapter, cntType])
+}
+
+model tblAccount {
+  accID              Int           @id @default(autoincrement())
+  accUserID          Int
+  accBalance         Int           @default(0)
+  accTotalSpent      Int           @default(0)
+  accCreatedBy_usrID Int
+  accCreatedDateTime DateTime      @default(now())
+  accUpdatedBy_usrID Int
+  accUpdatedDateTime DateTime      @updatedAt
+  user               tblUser       @relation(fields: [accUserID], references: [usrID])
+  invoices           tblInvoice[]
+}
+
+model tblInvoice {
+  invID              Int           @id @default(autoincrement())
+  invAccountID       Int
+  invPackage         String
+  invQuestions       Int
+  invPrice           Int
+  invStatus          String
+  invCreatedBy_usrID Int
+  invCreatedDateTime DateTime      @default(now())
+  invUpdatedBy_usrID Int
+  invUpdatedDateTime DateTime      @updatedAt
+  account            tblAccount    @relation(fields: [invAccountID], references: [accID])
+}
+
+model tblActionLogs {
+  atlID                Int         @id @default(autoincrement())
+  atlBy_usrID          Int
+  atlInsertionDateTime DateTime    @default(now())
+  atlType              String
+  atlDescription       Json
+  user                 tblUser     @relation("ActionBy", fields: [atlBy_usrID], references: [usrID])
+  createdBy            tblUser?    @relation("CreatedBy", fields: [atlBy_usrID], references: [usrID])
+  updatedBy            tblUser?    @relation("UpdatedBy", fields: [atlBy_usrID], references: [usrID])
+}

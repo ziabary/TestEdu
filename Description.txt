@@ -1,0 +1,93 @@
+Project Description: Educational Website (edu.targoman.ir)
+Purpose
+The project is an educational website for 7th-grade students (SMPAD and non-SMPAD) under edu.targoman.ir, focusing on Math (Chapter 1: Integers) with plans to expand to Physics and other grades/subjects. It offers free access to content (explanations, practices, exams) except for chat (10 free questions, then paid packages: 10, 50, 100 questions). The site is RTL, Persian, Mobile-First, and uses Vue.js 3 with TypeScript, Node.js with TypeScript, and SQLite (MVP, migratable to MySQL). It integrates Grok API for chat and is built in 3 days using Yarn, Docker, and Cursor.
+Key Features
+
+Main Page (src/views/Home.vue):
+Header: Logo, site name ("ترگمان آموزش"), avatar/login, dark mode toggle.
+Slogan: "یادگیری باحال، آینده روشن!" (Vazir, 32px).
+Grade Selection: Pre-K to 12th; only 7th grade active (blue), others gray ("به‌زودی").
+Footer: Sticky, "© ۱۴۰۴ ترگمان آموزش".
+Popup: Login/signup via phone.
+
+
+Book Page (src/views/Book.vue):
+Welcome: "خوش اومدی به کلاس هفتم، [نام]!".
+Books: Math, Physics; others "به‌زودی".
+Progress Bar: Chapter completion (e.g., "40% فصل اول").
+Suggestion: "فصل اول رو تموم کردی؟ یه امتحان بده!".
+Options: "تمرین", "امتحان", "چت با گروک".
+
+
+Practice Page (src/views/Practice.vue):
+Chapter: Icon, title (e.g., "اعداد صحیح").
+Explanation: Markdown with MathJax (e.g., $$-4 + 7 = 3$$).
+Sticky Chat Bar: Blinking, hides in exam.
+Practices: 15 questions with answers, explanations.
+New Practice: Random from DB.
+
+
+Exam Page (src/views/Exam.vue):
+Options: Chapter-specific/cumulative exams.
+Tips: "آرام باش، سؤالا رو دقیق بخون!".
+Questions: 5 questions, 15-min timer.
+Answer Sheet: Simple answers, chat for details.
+
+
+Profile Page (src/views/Profile.vue):
+Update name, email, avatar, grade.
+Show questions, balance.
+
+
+Progress Page (src/views/Progress.vue):
+List progress, activities with Jalali dates.
+
+
+Account Page (src/views/Account.vue):
+Balance, total spent, invoices.
+
+
+Purchase Page (src/views/Purchase.vue):
+Packages: 10 (10,000 IRR), 50 (45,000 IRR), 100 (80,000 IRR).
+
+
+Admin Panel (src/views/Admin.vue):
+Sidebar: Full-screen mobile menu.
+Tabs: Users, Accounts, Chats, Stats (sortable/filterable tables, Chart.js for stats).
+Stats: Guest users, IPs, page views.
+
+
+Chat:
+Sticky bar, 10 free questions, purchase prompt.
+
+
+
+Tech Stack
+
+Frontend: Vue.js 3, TypeScript, Tailwind CSS (Mobile-First, blue #1E88E5, gray #B0BEC5), Vite, vue-i18n, jalali-moment, vue-mathjax, chart.js.
+Backend: Node.js, TypeScript, Express, SQLite (Prisma), Swagger.
+Auth: JWT in HTTP-only cookies.
+Database: SQLite (tblUser, tblProgress, tblChat, tblContent, tblAccount, tblInvoice, tblActionLogs, tblGuestActivity).
+Assets: /public/images/ (SVG, PNG), /public/fonts/Vazir-Regular.ttf.
+Dev Tools: Yarn, Vite, Nodemon.
+Deployment: Docker.
+
+Database
+
+Naming: Tables (tblUser), columns (e.g., usrName), FKs (e.g., chtCreatedBy_usrID).
+Audit Columns: CreatedBy_usrID, CreatedDateTime; UpdatedBy_usrID in editable tables.
+tblActionLogs: Minimal logs via triggers, API events.
+tblGuestActivity: Tracks guest IPs, pages, actions.
+
+Content
+
+Math Chapter 1: Explanations, 15 practices, 5-question exam with MathJax.
+Stored in tblContent as JSON.
+
+Development Notes
+
+Backend: English code, Swagger docs.
+Frontend: Persian UI, Jalali dates, Mobile-First.
+Workflow: yarn dev, yarn start, docker-compose up.
+MVP Goal: 3-day build for 7th-grade Math.
+
