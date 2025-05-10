@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, Ref } from 'vue'
+import Cookies from 'js-cookie'
 
 interface Progress {
   id: number
@@ -29,11 +30,65 @@ interface User {
   usrQuestions: number
   progress: Progress[]
   chats: Chat[]
+  darkMode?: boolean
 }
 
-export const useAuthStore = defineStore('auth', () => {
+interface AuthStore {
+  user: Ref<User | null>
+  isAuthenticated: Ref<boolean>
+  isDarkMode: Ref<boolean>
+  showLoginModal: Ref<boolean>
+  loadDarkMode: () => void
+  toggleDarkMode: () => void
+  loadUserProfile: () => Promise<void>
+  updateProfile: (profileData: Partial<User>) => Promise<void>
+  logout: () => Promise<void>
+  updateProgress: (subject: string, chapter: string, completion: number, lastActivity: string, data: Record<string, any>) => Promise<void>
+  sendChat: (question: string, subject?: string, chapter?: string) => Promise<void>
+  getChatHistory: (page?: number, limit?: number) => Promise<void>
+  buyQuestions: (questions: number) => Promise<void>
+  showLoginDialog: () => void
+  closeLoginDialog: () => void
+}
+
+export const useAuthStore = defineStore('auth', (): AuthStore => {
   const user = ref<User | null>(null)
   const isAuthenticated = ref(false)
+  const isDarkMode = ref(false)
+  const showLoginModal = ref(false)
+
+  const showLoginDialog = () => {
+    console.log('showLoginDialog called')
+    showLoginModal.value = true
+    console.log('showLoginModal value:', showLoginModal.value)
+  }
+
+  const closeLoginDialog = () => {
+    console.log('closeLoginDialog called')
+    showLoginModal.value = false
+    console.log('showLoginModal value:', showLoginModal.value)
+  }
+
+  const loadDarkMode = () => {
+    const savedDarkMode = Cookies.get('darkMode')
+    if (savedDarkMode !== undefined) {
+      isDarkMode.value = savedDarkMode === 'true'
+    } else {
+      isDarkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    document.documentElement.classList.toggle('dark', isDarkMode.value)
+  }
+
+  const toggleDarkMode = () => {
+    isDarkMode.value = !isDarkMode.value
+    Cookies.set('darkMode', isDarkMode.value.toString(), { expires: 365 })
+    if (user.value) {
+      // Save dark mode preference to user profile
+      user.value.darkMode = isDarkMode.value
+    }
+    // Update document class
+    document.documentElement.classList.toggle('dark', isDarkMode.value)
+  }
 
   const loadUserProfile = async () => {
     try {
@@ -81,27 +136,16 @@ export const useAuthStore = defineStore('auth', () => {
       })
 
       if (response.ok) {
-        user.value = { ...user.value, ...profileData } as User
-        return true
+        user.value = { ...user.value, ...await response.json() }
       }
-      return false
     } catch (error) {
       console.error('Error updating profile:', error)
-      return false
     }
   }
 
   const logout = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (token) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-      }
+      await fetch('/api/auth/logout', { method: 'POST' })
     } catch (error) {
       console.error('Error during logout:', error)
     } finally {
@@ -225,12 +269,18 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     isAuthenticated,
+    isDarkMode,
+    showLoginModal,
+    loadDarkMode,
+    toggleDarkMode,
     loadUserProfile,
     updateProfile,
     logout,
     updateProgress,
     sendChat,
     getChatHistory,
-    buyQuestions
+    buyQuestions,
+    showLoginDialog,
+    closeLoginDialog
   }
 }) 

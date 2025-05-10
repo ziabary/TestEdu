@@ -1,16 +1,24 @@
-@import '@fontsource/vazirmatn';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+.default-placeholder input::placeholder {
+  letter-spacing: 0 !important;
+}
 
 @layer base {
+  :root {
+    --font-sans: 'Noto Sans Persian', sans-serif;
+  }
+  
   html {
-    @apply font-sans;
+    font-family: var(--font-sans);
   }
   
   body {
     @apply bg-gray-50 text-gray-900;
   }
+
+  .default-placeholder::placeholder {
+    letter-spacing: 0 !important;
+  }
+ 
 }
 
 @layer components {
@@ -19,10 +27,15 @@
   }
   
   .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary/90;
+    @apply btn bg-blue-500 text-white hover:bg-blue-600;
   }
   
   .btn-secondary {
-    @apply btn bg-secondary text-white hover:bg-secondary/90;
+    @apply btn bg-purple-600 text-white hover:bg-purple-700;
   }
-} 
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities; 
+

@@ -21,6 +21,9 @@ model tblUser {
   usrAvatar          String?
   usrGrade           Int?
   usrQuestions       Int           @default(10)
+  usrPassword        String
+  usrLastLogin       DateTime?
+  usrStatus          String        @default("active")
   usrCreatedBy_usrID Int?
   usrCreatedDateTime DateTime      @default(now())
   usrUpdatedBy_usrID Int?
@@ -32,6 +35,9 @@ model tblUser {
   actionLogs         tblActionLogs[] @relation("ActionBy")
   createdLogs        tblActionLogs[] @relation("CreatedBy")
   updatedLogs        tblActionLogs[] @relation("UpdatedBy")
+  practiceLogs       tblPracticeLog[]
+  examLogs           tblExamLog[]
+  exams              tblExam[]
 }
 
 model tblProgress {
@@ -40,7 +46,7 @@ model tblProgress {
   prgSubject         String
   prgChapter         String
   prgCompletion      Float
-  prgLastActivity    String
+  prgLastActivity    DateTime
   prgData            Json
   prgCreatedBy_usrID Int
   prgCreatedDateTime DateTime      @default(now())
@@ -64,6 +70,8 @@ model tblChat {
   chtCreatedDateTime DateTime      @default(now())
   user               tblUser       @relation(fields: [chtUserID], references: [usrID])
   session            tblSession    @relation(fields: [chtSessionID], references: [sesID])
+  content            tblContent?   @relation(fields: [chtSubject, chtChapter], references: [cntSubject, cntChapter])
+  question           tblQuestion   @relation("QuestionChat", fields: [chtQuestion], references: [qstQuestion])
 }
 
 model tblSession {
@@ -80,13 +88,17 @@ model tblContent {
   cntSubject         String
   cntChapter         String
   cntType            String
-  cntData            Json
+  cntTitle           String
+  cntContent         String
   cntCreatedBy_usrID Int
   cntCreatedDateTime DateTime      @default(now())
   cntUpdatedBy_usrID Int
   cntUpdatedDateTime DateTime      @updatedAt
+  questions          tblQuestion[]
+  chatLogs           tblChat[]
 
   @@unique([cntSubject, cntChapter, cntType])
+  @@unique([cntSubject, cntChapter])
 }
 
 model tblAccount {
@@ -105,24 +117,109 @@ model tblAccount {
 model tblInvoice {
   invID              Int           @id @default(autoincrement())
   invAccountID       Int
-  invPackage         String
+  invPackageID       Int
   invQuestions       Int
-  invPrice           Int
-  invStatus          String
+  invAmount          Int
+  invStatus          String        @default("pending")
+  invPaymentMethod   String
+  invPaymentRefID    String?
   invCreatedBy_usrID Int
   invCreatedDateTime DateTime      @default(now())
   invUpdatedBy_usrID Int
   invUpdatedDateTime DateTime      @updatedAt
   account            tblAccount    @relation(fields: [invAccountID], references: [accID])
+  package            tblPackage    @relation(fields: [invPackageID], references: [pkgID])
 }
 
 model tblActionLogs {
   atlID                Int         @id @default(autoincrement())
-  atlBy_usrID          Int
+  atlBy_usrID          Int         @unique
   atlInsertionDateTime DateTime    @default(now())
   atlType              String
   atlDescription       Json
   user                 tblUser     @relation("ActionBy", fields: [atlBy_usrID], references: [usrID])
   createdBy            tblUser?    @relation("CreatedBy", fields: [atlBy_usrID], references: [usrID])
   updatedBy            tblUser?    @relation("UpdatedBy", fields: [atlBy_usrID], references: [usrID])
+  examLogs             tblExamLog[]
+  practiceLogs         tblPracticeLog[]
+  examActions          tblExam[]   @relation("ExamAction")
+}
+model tblQuestion {
+  qstID              Int           @id @default(autoincrement())
+  qstSubject         String
+  qstChapter         String
+  qstType            String        // 'practice' or 'exam'
+  qstDifficulty      Int           // 1-5
+  qstQuestion        String        @unique
+  qstAnswer          String
+  qstExplanation     String?
+  qstCreatedBy_usrID Int
+  qstCreatedDateTime DateTime      @default(now())
+  qstUpdatedBy_usrID Int
+  qstUpdatedDateTime DateTime      @updatedAt
+  content            tblContent    @relation(fields: [qstSubject, qstChapter], references: [cntSubject, cntChapter])
+  practiceLogs       tblPracticeLog[]
+  examLogs           tblExamLog[]
+  chatLogs           tblChat[] @relation("QuestionChat")
+}
+
+model tblPackage {
+  pkgID              Int           @id @default(autoincrement())
+  pkgName            String
+  pkgQuestions       Int
+  pkgPrice           Int
+  pkgDurationDays    Int
+  pkgDescription     String
+  pkgCreatedBy_usrID Int
+  pkgCreatedDateTime DateTime      @default(now())
+  pkgUpdatedBy_usrID Int
+  pkgUpdatedDateTime DateTime      @updatedAt
+  invoices           tblInvoice[]
+}
+
+model tblPracticeLog {
+  plgID              Int           @id @default(autoincrement())
+  plgUserID          Int
+  plgQuestionID      Int
+  plgAnswer          String
+  plgIsCorrect       Boolean
+  plgDuration        Int           // in seconds
+  plgCreatedBy_usrID Int
+  plgCreatedDateTime DateTime      @default(now())
+  user               tblUser       @relation(fields: [plgUserID], references: [usrID])
+  question           tblQuestion   @relation(fields: [plgQuestionID], references: [qstID])
+  actionLog          tblActionLogs @relation(fields: [plgCreatedBy_usrID], references: [atlBy_usrID])
+}
+
+model tblExamLog {
+  elgID              Int           @id @default(autoincrement())
+  elgUserID          Int
+  elgQuestionID      Int
+  elgAnswer          String
+  elgIsCorrect       Boolean
+  elgExamID          Int
+  elgCreatedBy_usrID Int
+  elgCreatedDateTime DateTime      @default(now())
+  user               tblUser       @relation(fields: [elgUserID], references: [usrID])
+  question           tblQuestion   @relation(fields: [elgQuestionID], references: [qstID])
+  exam               tblExam       @relation(fields: [elgExamID], references: [exmID])
+  actionLog          tblActionLogs @relation(fields: [elgCreatedBy_usrID], references: [atlBy_usrID])
+}
+
+model tblExam {
+  exmID              Int           @id @default(autoincrement())
+  exmUserID          Int
+  exmType            String        // 'chapter' or 'cumulative'
+  exmDuration        Int           // in minutes
+  exmQuestions       Int
+  exmScore           Int
+  exmMaxScore        Int
+  exmStatus          String        // 'active', 'completed', 'expired'
+  exmCreatedBy_usrID Int
+  exmCreatedDateTime DateTime      @default(now())
+  exmUpdatedBy_usrID Int
+  exmUpdatedDateTime DateTime      @updatedAt
+  user               tblUser       @relation(fields: [exmUserID], references: [usrID])
+  questions          tblExamLog[]
+  actionLogs         tblActionLogs[] @relation("ExamAction")
 }

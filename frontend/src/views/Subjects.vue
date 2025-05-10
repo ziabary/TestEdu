@@ -1,34 +1,43 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-8">{{ t('subjects.title') }}</h1>
-
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <div v-for="subject in subjects" :key="subject.name" class="bg-white overflow-hidden shadow rounded-lg">
-          <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg font-medium text-gray-900">{{ subject.name }}</h3>
-            <p class="mt-1 text-sm text-gray-500">{{ subject.description }}</p>
-
-            <div class="mt-6 space-y-4">
-              <div v-for="chapter in subject.chapters" :key="chapter.name" class="relative">
-                <div class="flex items-center justify-between">
-                  <router-link
-                    :to="`/chat/${subject.name}/${chapter.name}`"
-                    class="text-sm font-medium text-blue-600 hover:text-blue-500"
-                  >
-                    {{ chapter.name }}
-                  </router-link>
-                  <span class="text-sm text-gray-500">{{ chapter.progress }}%</span>
-                </div>
-                <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    class="bg-blue-600 h-2 rounded-full"
-                    :style="{ width: `${chapter.progress}%` }"
-                  ></div>
-                </div>
-              </div>
-            </div>
+  <div class="space-y-8">
+    <h1 class="text-3xl font-bold text-center mb-8">کتاب‌ها</h1>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        v-for="book in books"
+        :key="book.id"
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center cursor-pointer transition-all duration-200 hover:shadow-lg"
+        @click="$router.push(`/book/${book.id}`)"
+      >
+        <div class="relative">
+          <img
+            :src="book.image"
+            :alt="book.title"
+            class="w-full h-48 object-cover rounded-lg mb-4"
+          />
+          <div v-if="book.progress > 0" class="absolute bottom-2 right-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs">
+            {{ book.progress }}%
           </div>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">{{ book.title }}</h3>
+        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-4">
+          <div
+            :style="{ width: `${book.progress}%` }"
+            class="bg-blue-500 h-2.5 rounded-full"
+          ></div>
+        </div>
+        <div class="mt-4 flex justify-center space-x-4">
+          <button
+            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            @click.stop="goToPractice(book.id)"
+          >
+            حل تمرین
+          </button>
+          <button
+            class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+            @click.stop="goToExam(book.id)"
+          >
+            آزمون
+          </button>
         </div>
       </div>
     </div>
@@ -36,42 +45,64 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 
-const authStore = useAuthStore()
 const { t } = useI18n()
+const router = useRouter()
 
-interface Chapter {
-  name: string
+interface Book {
+  id: number
+  title: string
+  image: string
   progress: number
 }
 
-interface Subject {
-  name: string
-  description: string
-  chapters: Chapter[]
-}
-
-const subjects = ref<Subject[]>([])
-
-const loadSubjects = async () => {
-  try {
-    const response = await fetch('/api/subjects', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    if (response.ok) {
-      subjects.value = await response.json()
-    }
-  } catch (error) {
-    console.error('Error loading subjects:', error)
+const books = ref<Book[]>([
+  {
+    id: 1,
+    title: 'زبان فارسی',
+    image: '/images/books/persian.jpg',
+    progress: 25
+  },
+  {
+    id: 2,
+    title: 'ریاضی',
+    image: '/images/books/math.jpg',
+    progress: 0
+  },
+  {
+    id: 3,
+    title: 'علوم تجربی',
+    image: '/images/books/science.jpg',
+    progress: 45
+  },
+  {
+    id: 4,
+    title: 'تاریخ',
+    image: '/images/books/history.jpg',
+    progress: 15
+  },
+  {
+    id: 5,
+    title: 'جغرافیا',
+    image: '/images/books/geography.jpg',
+    progress: 30
+  },
+  {
+    id: 6,
+    title: 'قرآن',
+    image: '/images/books/quran.jpg',
+    progress: 0
   }
+])
+
+const goToPractice = (bookId: number) => {
+  router.push(`/practice/${bookId}`)
 }
 
-onMounted(() => {
-  loadSubjects()
-})
-</script> 
+const goToExam = (bookId: number) => {
+  router.push(`/exam/${bookId}`)
+}
+</script>

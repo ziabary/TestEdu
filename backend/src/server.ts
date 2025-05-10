@@ -5,10 +5,12 @@ import swaggerRouter from './swagger'
 import { WebSocketServer, WebSocket, MessageEvent } from 'ws'
 import { v4 as uuidv4 } from 'uuid'
 import jwt from 'jsonwebtoken'
-import axios from 'axios'
 import http from 'http'
 import cookieParser from 'cookie-parser'
 import moment from 'moment-timezone'
+import { securityHeaders, corsConfig, apiLimiter, wsRateLimit } from './middleware/security'
+import { avvalaiService } from './services/avvalai'
+import axios from 'axios'
 
 process.env.TZ = 'Asia/Tehran'
 
@@ -17,6 +19,13 @@ const server = http.createServer(app)
 const prisma = new PrismaClient()
 const port = process.env.PORT || 3001
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+
+// Apply security middleware
+app.use(securityHeaders)
+app.use(corsConfig)
+app.use(apiLimiter)
+app.use(cookieParser())
+app.use(express.json())
 
 // Create WebSocket server
 const wss = new WebSocketServer({ noServer: true })
@@ -70,6 +79,8 @@ server.on('upgrade', (req, socket, head) => {
 interface ConnectionState {
   sessionId: string
   userId: number
+  lastMessageTime: number
+  messages: number
 }
 const connectionStates: Map<WebSocket, ConnectionState> = new Map()
 
@@ -100,140 +111,76 @@ wss.on('connection', (ws: WebSocket, req: http.IncomingMessage, sessionId?: stri
     ws.send(JSON.stringify({ setCookie: `sessionId=${sessionId}` }))
   }
 
-  connectionStates.set(ws, { sessionId, userId: user.usrID })
+  const state: ConnectionState = {
+    sessionId,
+    userId: user.usrID,
+    lastMessageTime: Date.now(),
+    messages: 0
+  }
+  connectionStates.set(ws, state)
 
-  ws.on('message', async (message: MessageEvent) => {
-    const data = JSON.parse(message.data.toString())
-    const { question, subject, chapter } = data
-    const state = connectionStates.get(ws)
-    if (!state) return
-
-    const userData = await prisma.tblUser.findUnique({
-      where: { usrID: state.userId },
-      select: { usrQuestions: true }
-    })
-    if (!userData || userData.usrQuestions <= 0) {
-      ws.send('E:خرید بسته')
+  ws.on('message', async (message: Buffer) => {
+    // Use the WebSocket rate limiting from security middleware
+    if (!wsRateLimit(ws, req)) {
       return
     }
 
-    await prisma.tblUser.update({
-      where: { usrID: state.userId },
-      data: { usrQuestions: { decrement: 1 } }
-    })
-
-    await prisma.tblChat.create({
-      data: {
-        chtUserID: state.userId,
-        chtSessionID: state.sessionId,
-        chtSubject: subject,
-        chtChapter: chapter,
-        chtQuestion: question,
-        chtResponse: '',
-        chtCost: 1,
-        chtCreatedBy_usrID: state.userId
-      }
-    })
-
-    const conversation = await prisma.tblChat.findMany({
-      where: { chtSessionID: state.sessionId },
-      select: { chtQuestion: true, chtResponse: true },
-      orderBy: { chtCreatedDateTime: 'asc' }
-    })
-
-    const messages = [
-      {
-        role: 'system',
-        content: [
-          'تو یک معلم ریاضی و فیزیک برای کلاس هفتم هستی که فقط به فارسی پاسخ می‌دهی.',
-          'پاسخ‌ها باید کوتاه، دقیق، و مناسب دانش‌آموزان کلاس هفتم باشند.',
-          'از MathJax برای فرمول‌ها استفاده کن (مثال: $$x + y = z$$).',
-          'فقط به سؤالات مرتبط با ریاضی و فیزیک کلاس هفتم پاسخ بده. برای سؤالات خارج از این حوزه بگو: «این سؤال خارج از موضوع درسه!»',
-          'اگر سؤالم درباره ترگمان یا کلان‌پیکره ترگمان بود، کاربر رو به https://b2n.ir/TLPC هدایت کن.',
-          'درباره اینکه کی هستی بگو: «من یک دستیار آموزشی برای ریاضی و فیزیک کلاس هفتمم که توسط گروه هوش‌آفرین ساخته شدم.»'
-        ].join(' ')
-      },
-      ...conversation.flatMap(c => [
-        { role: 'user', content: c.chtQuestion },
-        { role: 'assistant', content: c.chtResponse || '' }
-      ]).filter(m => m.content),
-      { role: 'user', content: question }
-    ]
-
-    const abortController = new AbortController()
-    const stopListener = (event: MessageEvent) => {
-      const data = JSON.parse(event.data.toString())
-      if (data.message === 'STOP_STREAM') {
-        abortController.abort()
-        ws.removeEventListener('message', stopListener)
-      }
-    }
-    ws.on('message', stopListener)
-
     try {
-      const response = await axios({
-        method: 'POST',
-        url: 'https://api.x.ai/v1/chat/completions',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.GROK_API_KEY}`
-        },
-        data: {
-          model: 'grok-3',
-          messages,
-          stream: true
-        },
-        responseType: 'stream',
-        signal: abortController.signal
-      })
+      const currentState = connectionStates.get(ws)
+      if (!currentState) return
 
-      let botResponse = ''
-      const stream = response.data
-      stream.on('data', (chunk: Buffer) => {
-        const lines = chunk.toString().split('\n').filter(line => line.startsWith('data: '))
-        for (const line of lines) {
-          if (line === 'data: [DONE]') continue
-          try {
-            const data = JSON.parse(line.replace('data: ', ''))
-            const content = data.choices[0]?.delta?.content || ''
-            if (content) {
-              botResponse += content
-              ws.send(`M:${content}`)
-            }
-          } catch {}
+      // Update message tracking
+      const now = Date.now()
+      if (now - currentState.lastMessageTime < 1000) {
+        currentState.messages++
+        if (currentState.messages > 10) {
+          ws.send('E:Too many messages')
+          ws.close()
+          return
         }
+      } else {
+        currentState.messages = 1
+        currentState.lastMessageTime = now
+      }
+
+      const data = JSON.parse(message.toString())
+      const { question, subject, chapter } = data
+
+      if (!question || !subject || !chapter) {
+        ws.send('E:Invalid request')
+        return
+      }
+
+      const userData = await prisma.tblUser.findUnique({
+        where: { usrID: currentState.userId },
+        select: { usrQuestions: true }
       })
 
-      stream.on('end', async () => {
-        ws.removeEventListener('message', stopListener)
-        if (botResponse) {
-          await prisma.tblChat.updateMany({
-            where: { chtSessionID: state.sessionId, chtQuestion: question },
-            data: { chtResponse: botResponse }
-          })
+      if (!userData || userData.usrQuestions <= 0) {
+        ws.send('E:خرید بسته')
+        return
+      }
 
-          const title = await generateConversationTitle(state.sessionId, conversation.concat({ chtQuestion: question, chtResponse: botResponse }))
-          await prisma.tblSession.update({
-            where: { sesID: state.sessionId },
-            data: { sesTitle: title }
-          })
+      // Process chat message through avvalai
+      const response = await avvalaiService.sendMessage(
+        question,
+        subject,
+        chapter,
+        currentState.userId
+      )
 
-          const history = await prisma.tblSession.findMany({
-            where: { sesUserID: state.userId },
-            select: { sesID: true, sesTitle: true, sesCreatedDateTime: true },
-            orderBy: { sesCreatedDateTime: 'desc' }
-          })
-          ws.send(JSON.stringify({ history: history.filter(h => h.sesID !== state.sessionId) }))
-          ws.send('A:Stream completed.')
-        }
+      // Send response to client
+      ws.send(`M:${response}`)
+
+      // Update user's question count
+      await prisma.tblUser.update({
+        where: { usrID: currentState.userId },
+        data: { usrQuestions: { decrement: 1 } }
       })
 
-      stream.on('error', (err: any) => {
-        ws.removeEventListener('message', stopListener)
-        if (err.name !== 'AbortError') ws.send('E:Error receiving response')
-      })
     } catch (error) {
-      ws.send('E:Error receiving response')
+      console.error('WebSocket error:', error)
+      ws.send('E:Error processing message')
     }
   })
 

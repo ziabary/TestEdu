@@ -1,25 +1,26 @@
 <template>
   <div class="flex flex-col md:flex-row min-h-screen bg-gray-50">
     <!-- Sidebar for chat sessions/history -->
-    <aside class="w-full md:w-1/4 bg-white border-r shadow-sm p-4 hidden md:block">
+    <el-aside width="300px" class="bg-white border-r shadow-sm p-4 hidden md:block">
       <h2 class="text-lg font-bold mb-4">{{ $t('chat.sessions') }}</h2>
-      <ul>
-        <li v-for="session in sessions" :key="session.sesID" class="mb-2">
-          <button
-            class="w-full text-left px-2 py-1 rounded hover:bg-gray-100"
-            :class="{ 'bg-blue-100': session.sesID === currentSessionId }"
+      <el-menu>
+        <el-menu-item
+          v-for="session in sessions"
+          :key="session.sesID"
+          :class="{ 'is-active': session.sesID === currentSessionId }"
             @click="selectSession(session.sesID)"
           >
+          <template #title>
             <span class="font-semibold">{{ session.sesTitle || $t('chat.untitled') }}</span>
             <span class="block text-xs text-gray-500">{{ formatDate(session.sesCreatedDateTime) }}</span>
-          </button>
-        </li>
-      </ul>
-    </aside>
+          </template>
+        </el-menu-item>
+      </el-menu>
+    </el-aside>
 
     <!-- Main chat area -->
-    <main class="flex-1 flex flex-col">
-      <header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between">
+    <el-main class="flex-1 flex flex-col">
+      <el-header class="bg-white shadow-sm px-4 py-3 flex items-center justify-between">
         <div>
           <h1 class="text-xl font-bold">{{ $t('chat.title') }}</h1>
           <div v-if="subject || chapter" class="text-sm text-gray-500 mt-1">
@@ -27,14 +28,14 @@
             <span v-if="chapter"> | {{ $t('chat.chapter') }}: {{ chapter }}</span>
           </div>
         </div>
-        <button class="btn btn-secondary" @click="refreshSessions">
+        <el-button @click="refreshSessions">
           {{ $t('chat.refresh') }}
-        </button>
-      </header>
-      <section class="flex-1 overflow-y-auto p-2 md:p-6">
+        </el-button>
+      </el-header>
+      <el-main class="flex-1 overflow-y-auto p-2 md:p-6">
         <Chat :session-id="currentSessionId" :subject="subject" :chapter="chapter" />
-      </section>
-    </main>
+      </el-main>
+    </el-main>
   </div>
 </template>
 
@@ -43,45 +44,50 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Chat from '@/components/Chat.vue'
 import axios from 'axios'
+import { useMessage } from '@/composables/useMessage'
 
 const route = useRoute()
 const router = useRouter()
 const subject = ref(route.params.subject as string || '')
 const chapter = ref(route.params.chapter as string || '')
+const currentSessionId = ref<number | null>(null)
 const sessions = ref<any[]>([])
-const currentSessionId = ref<string>('')
 
-const fetchSessions = async () => {
+const { showMessage } = useMessage()
+
+const loadSessions = async () => {
   try {
-    const res = await axios.get('/api/sessions')
-    sessions.value = res.data
-    if (!currentSessionId.value && sessions.value.length > 0) {
-      currentSessionId.value = sessions.value[0].sesID
-    }
-  } catch (e) {
-    // handle error
+    const response = await axios.get('/api/chat/sessions')
+    sessions.value = response.data
+  } catch (error) {
+    showMessage({
+      success: false,
+      code: 'SYS_001',
+      message: 'Failed to load chat sessions',
+      translation: 'خطا در بارگذاری گفتگوها'
+    })
   }
 }
 
-const selectSession = (id: string) => {
-  currentSessionId.value = id
+const selectSession = (sessionId: number) => {
+  currentSessionId.value = sessionId
 }
 
 const refreshSessions = () => {
-  fetchSessions()
+  loadSessions()
 }
 
 const formatDate = (date: string) => {
-  return new Date(date).toLocaleString('fa-IR')
+  return new Date(date).toLocaleDateString('fa-IR')
 }
 
-onMounted(() => {
-  fetchSessions()
+watch(() => route.params, (newParams) => {
+  subject.value = newParams.subject as string || ''
+  chapter.value = newParams.chapter as string || ''
 })
 
-watch(() => route.params, (params) => {
-  subject.value = params.subject as string || ''
-  chapter.value = params.chapter as string || ''
+onMounted(() => {
+  loadSessions()
 })
 </script>
 

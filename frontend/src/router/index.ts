@@ -10,15 +10,21 @@ const router = createRouter({
       component: () => import('@/views/Home.vue')
     },
     {
-      path: '/subjects',
-      name: 'subjects',
-      component: () => import('@/views/Subjects.vue'),
+      path: '/book',
+      name: 'book',
+      component: () => import('@/views/Book.vue'),
       meta: { requiresAuth: true }
     },
     {
-      path: '/chat/:subject?/:chapter?',
-      name: 'chat',
-      component: () => import('@/views/Chat.vue'),
+      path: '/practice',
+      name: 'practice',
+      component: () => import('@/views/Practice.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/exam',
+      name: 'exam',
+      component: () => import('@/views/Exam.vue'),
       meta: { requiresAuth: true }
     },
     {
@@ -26,6 +32,30 @@ const router = createRouter({
       name: 'profile',
       component: () => import('@/views/Profile.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/progress',
+      name: 'progress',
+      component: () => import('@/views/Progress.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/account',
+      name: 'account',
+      component: () => import('@/views/Account.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/purchase',
+      name: 'purchase',
+      component: () => import('@/views/Purchase.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('@/views/Admin.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
     }
   ]
 })
@@ -34,6 +64,7 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   const token = localStorage.getItem('token')
 
+  // Check authentication
   if (to.meta.requiresAuth) {
     if (!token) {
       next({ name: 'home' })
@@ -47,6 +78,12 @@ router.beforeEach(async (to, from, next) => {
         next({ name: 'home' })
         return
       }
+    }
+
+    // Check admin access
+    if (to.meta.requiresAdmin && authStore.user?.usrGrade !== 0) {
+      next({ name: 'home' })
+      return
     }
   }
 

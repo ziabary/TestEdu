@@ -1,5 +1,9 @@
 {
   "dependencies": {
+    "@polkadot/util": "^13.1.1",
+    "@polkadot/util-crypto": "^13.1.1",
+    "@polkadot/x-textdecoder": "^13.1.1",
+    "@polkadot/x-textencoder": "^13.1.1",
     "vite-tsconfig-paths": "^5.1.4"
   }
 }

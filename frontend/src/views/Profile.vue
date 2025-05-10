@@ -5,143 +5,87 @@
         <h1 class="text-3xl font-bold text-gray-900 mb-8">{{ t('auth.profile.title') }}</h1>
 
         <!-- Profile Information -->
-        <div class="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 class="text-lg font-medium text-gray-900 mb-4">{{ t('auth.profile.title') }}</h2>
-          <form @submit.prevent="updateProfile" class="space-y-4">
-            <div>
-              <label for="name" class="block text-sm font-medium text-gray-700">{{ t('auth.profile.name') }}</label>
-              <input
-                id="name"
+        <el-card class="mb-8">
+          <template #header>
+            <h2 class="text-lg font-medium text-gray-900">{{ t('auth.profile.title') }}</h2>
+          </template>
+          <el-form @submit.prevent="updateProfile" class="space-y-4">
+            <el-form-item :label="t('auth.profile.name')">
+              <el-input
                 v-model="profile.name"
                 type="text"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                :placeholder="t('auth.profile.enterName')"
               />
-            </div>
+            </el-form-item>
 
-            <div>
-              <label for="email" class="block text-sm font-medium text-gray-700">{{ t('auth.profile.email') }}</label>
-              <input
-                id="email"
+            <el-form-item :label="t('auth.profile.email')">
+              <el-input
                 v-model="profile.email"
                 type="email"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                :placeholder="t('auth.profile.enterEmail')"
               />
-            </div>
+            </el-form-item>
 
-            <div>
-              <label for="phone" class="block text-sm font-medium text-gray-700">{{ t('auth.phoneNumber') }}</label>
-              <input
-                id="phone"
+            <el-form-item :label="t('auth.phoneNumber')">
+              <el-input
                 v-model="profile.phone"
                 type="tel"
                 disabled
-                class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm"
               />
-            </div>
+            </el-form-item>
 
-            <div>
-              <label for="grade" class="block text-sm font-medium text-gray-700">{{ t('auth.profile.grade') }}</label>
-              <select
-                id="grade"
-                v-model="profile.grade"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="7">7th Grade</option>
-                <option value="8">8th Grade</option>
-                <option value="9">9th Grade</option>
-              </select>
-            </div>
-
-            <div class="flex justify-end">
-              <button
-                type="submit"
-                class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
+            <el-form-item>
+              <el-button type="primary" native-type="submit">
                 {{ t('auth.profile.save') }}
-              </button>
-            </div>
-          </form>
-        </div>
+              </el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
 
-        <!-- Question Balance -->
-        <div class="bg-white shadow rounded-lg p-6 mb-8">
-          <div class="flex justify-between items-center">
-            <div>
-              <h2 class="text-lg font-medium text-gray-900">{{ t('auth.profile.questions') }}</h2>
-              <p class="mt-1 text-sm text-gray-500">{{ profile.questions }} {{ t('auth.profile.questions') }}</p>
-            </div>
-            <button
-              @click="showPurchaseModal = true"
-              class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        <!-- Activity History -->
+        <el-card>
+          <template #header>
+            <h2 class="text-lg font-medium text-gray-900">{{ t('auth.profile.activityHistory') }}</h2>
+          </template>
+          <el-timeline>
+            <el-timeline-item
+              v-for="activity in activities"
+              :key="activity.id"
+              :timestamp="formatDate(activity.timestamp)"
+              placement="top"
             >
-              {{ t('auth.profile.purchase') }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="bg-white shadow rounded-lg p-6">
-          <h2 class="text-lg font-medium text-gray-900 mb-4">{{ t('auth.profile.recentActivity') }}</h2>
-          <div class="space-y-4">
-            <div v-for="activity in activities" :key="activity.id" class="flex items-start">
-              <div class="flex-shrink-0">
-                <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <svg class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-              <div class="mr-3">
-                <p class="text-sm font-medium text-gray-900">{{ activity.description }}</p>
-                <p class="text-sm text-gray-500">{{ formatDate(activity.timestamp) }}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+              {{ activity.description }}
+            </el-timeline-item>
+          </el-timeline>
+        </el-card>
       </div>
     </div>
 
     <!-- Purchase Modal -->
-    <div v-if="showPurchaseModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-      <div class="bg-white rounded-lg max-w-md w-full p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-medium text-gray-900">{{ t('auth.profile.purchase') }}</h3>
-          <button
-            @click="showPurchaseModal = false"
-            class="text-gray-400 hover:text-gray-500"
-          >
-            <span class="sr-only">Close</span>
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div class="space-y-4">
-          <div v-for="pkg in packages" :key="pkg.id" class="flex items-center">
-            <input
-              :id="pkg.id"
-              v-model="selectedPackage"
-              :value="pkg.id"
-              type="radio"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500"
-            />
-            <label :for="pkg.id" class="mr-3 block text-sm font-medium text-gray-700">
+    <el-dialog
+      v-model="showPurchaseModal"
+      :title="t('auth.profile.purchase')"
+      width="30%"
+    >
+      <el-radio-group v-model="selectedPackage">
+        <el-radio
+          v-for="pkg in packages"
+          :key="pkg.id"
+          :label="pkg.id"
+          class="block mb-4"
+        >
               {{ pkg.questions }} {{ t('auth.profile.questions') }} - {{ pkg.price }} Toman
-            </label>
-          </div>
-        </div>
-
-        <div class="mt-6 flex justify-end">
-          <button
-            @click="purchaseQuestions"
-            class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
+        </el-radio>
+      </el-radio-group>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showPurchaseModal = false">{{ t('common.cancel') }}</el-button>
+          <el-button type="primary" @click="purchaseQuestions">
             {{ t('auth.profile.purchase') }}
-          </button>
-        </div>
-      </div>
-    </div>
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -150,9 +94,11 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import moment from 'moment-jalaali'
+import { useMessage } from '@/composables/useMessage'
 
 const authStore = useAuthStore()
 const { t } = useI18n()
+const { showMessage } = useMessage()
 
 interface Activity {
   id: number
@@ -209,7 +155,12 @@ const loadProfile = async () => {
       }
     }
   } catch (error) {
-    console.error('Error loading profile:', error)
+    showMessage({
+      success: false,
+      code: 'SYS_001',
+      message: 'Failed to load user profile',
+      translation: 'خطا در بارگذاری پروفایل'
+    })
   }
 }
 
@@ -225,6 +176,12 @@ const loadActivities = async () => {
     }
   } catch (error) {
     console.error('Error loading activities:', error)
+    showMessage({
+      success: false,
+      code: 'SYS_001',
+      message: 'Failed to load activities',
+      translation: 'خطا در بارگذاری تاریخچه فعالیت'
+    })
   }
 }
 
@@ -235,18 +192,30 @@ const updateProfile = async () => {
       usrEmail: profile.value.email,
       usrGrade: profile.value.grade
     })
-    if (success) {
-      alert('Profile updated successfully')
-    }
+    showMessage({
+      success: true,
+      code: 'USER_003',
+      message: 'Profile updated successfully',
+      translation: 'پروفایل با موفقیت بروزرسانی شد'
+    })
   } catch (error) {
-    console.error('Error updating profile:', error)
-    alert(t('errors.updateFailed'))
+    showMessage({
+      success: false,
+      code: 'SYS_001',
+      message: 'Failed to update profile',
+      translation: 'خطا در بروزرسانی پروفایل'
+    })
   }
 }
 
 const purchaseQuestions = async () => {
   if (!selectedPackage.value) {
-    alert('Please select a package')
+    showMessage({
+      success: false,
+      code: 'USER_004',
+      message: 'Please select a package',
+      translation: 'لطفاً یک پکیج انتخاب کنید'
+    })
     return
   }
 
@@ -257,11 +226,20 @@ const purchaseQuestions = async () => {
     if (success) {
       showPurchaseModal.value = false
       await loadProfile()
-      alert('Purchase successful')
+      showMessage({
+        success: true,
+        code: 'USER_005',
+        message: 'Package purchased successfully',
+        translation: 'پکیج با موفقیت خریداری شد'
+      })
     }
   } catch (error) {
-    console.error('Error purchasing questions:', error)
-    alert(t('errors.purchaseFailed'))
+    showMessage({
+      success: false,
+      code: 'SYS_001',
+      message: 'Failed to purchase package',
+      translation: 'خطا در خرید پکیج'
+    })
   }
 }
 

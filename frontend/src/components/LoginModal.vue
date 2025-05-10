@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useI18n } from 'vue-i18n'
+import { ElDialog, ElForm, ElFormItem, ElInput, ElButton } from 'element-plus'
 
 const auth = useAuthStore()
 const { t } = useI18n()
@@ -28,6 +29,21 @@ const handleSubmit = async () => {
   }
 }
 
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
+// Close modal when close event is emitted
+watch(() => auth.showLoginModal, (value) => {
+  if (!value) {
+    emit('close')
+  }
+})
+
+const close = () => {
+  emit('close')
+}
+
 const handleProfileSubmit = async () => {
   if (!name.value) return
   
@@ -37,62 +53,43 @@ const handleProfileSubmit = async () => {
       name: name.value,
       email: email.value || undefined
     })
-    emit('close')
+    auth.closeLoginDialog() // Close the dialog after successful submission
   } catch (error) {
     console.error('Profile update error:', error)
   } finally {
     isLoading.value = false
   }
 }
-
-const emit = defineEmits<{
-  (e: 'close'): void
-  (e: 'login', phone: string): void
-}>()
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-    <div class="bg-white rounded-lg max-w-md w-full p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-gray-900">{{ t('auth.loginTitle') }}</h2>
-        <button
-          @click="$emit('close')"
-          class="text-gray-400 hover:text-gray-500"
+  <ElDialog
+    :visible="true"
+    :before-close="close"
+    :title="t('auth.loginTitle')"
+    width="50%"
+    class="max-w-md"
+  >
+    <ElForm @submit.prevent="handleSubmit">
+      <ElFormItem :label="t('auth.phoneNumber')">
+        <ElInput
+          v-model="phone"
+          type="tel"
+          pattern="[0-9]{11}"
+          :placeholder="t('auth.enterPhone')"
+          required
+        />
+      </ElFormItem>
+
+      <div class="flex justify-end">
+        <ElButton
+          type="primary"
+          :disabled="isLoading"
+          native-type="submit"
         >
-          <span class="sr-only">Close</span>
-          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+          {{ isLoading ? t('auth.loading') : t('auth.login') }}
+        </ElButton>
       </div>
-
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-        <div>
-          <label for="phone" class="block text-sm font-medium text-gray-700">{{ t('auth.phoneNumber') }}</label>
-          <div class="mt-1">
-            <input
-              id="phone"
-              v-model="phone"
-              type="tel"
-              pattern="[0-9]{11}"
-              :placeholder="t('auth.enterPhone')"
-              required
-              class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-
-        <div class="flex justify-end">
-          <button
-            type="submit"
-            :disabled="isLoading"
-            class="w-full bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {{ isLoading ? t('auth.loading') : t('auth.login') }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</template> 
+    </ElForm>
+  </ElDialog>
+</template>

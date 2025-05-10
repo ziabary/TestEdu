@@ -1,107 +1,95 @@
 <template>
   <div class="flex flex-col h-screen bg-gray-50">
     <!-- Header -->
-    <div class="bg-white shadow-sm p-4">
+    <el-header class="bg-white shadow-sm p-4">
       <h1 class="text-xl font-bold text-gray-900">{{ subject }} - {{ chapter }}</h1>
       <p class="text-sm text-gray-500">سوالات باقیمانده: {{ userQuestions }}</p>
-    </div>
+    </el-header>
 
     <!-- Messages -->
-    <div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+    <el-main ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
       <div v-for="(message, index) in messages" :key="index" 
            :class="['flex', message.role === 'user' ? 'justify-end' : 'justify-start']">
-        <div :class="[
-          'max-w-[80%] rounded-lg p-3',
+        <el-card
+          :class="[
+            'max-w-[80%]',
           message.role === 'user' 
             ? 'bg-blue-500 text-white' 
-            : 'bg-white shadow-sm'
-        ]">
+              : 'bg-white'
+          ]"
+          shadow="never"
+        >
           <div v-html="renderMath(message.content)"></div>
-        </div>
+        </el-card>
       </div>
       <div v-if="isLoading" class="flex justify-start">
-        <div class="bg-white shadow-sm rounded-lg p-3">
+        <el-card shadow="never" class="bg-white">
           <div class="animate-pulse">در حال پاسخگویی...</div>
-        </div>
+        </el-card>
       </div>
-    </div>
+    </el-main>
 
     <!-- Input -->
-    <div class="bg-white border-t p-4">
-      <form @submit.prevent="sendMessage" class="flex gap-2">
-        <input
+    <el-footer class="bg-white border-t p-4">
+      <el-form @submit.prevent="sendMessage" class="flex gap-2">
+        <el-input
           v-model="newMessage"
           type="text"
-          placeholder="سوال خود را بپرسید..."
-          class="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          :placeholder="t('chat.enterQuestion')"
           :disabled="isLoading || userQuestions <= 0"
+          class="flex-1"
         />
-        <button
-          type="submit"
-          class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+        <el-button
+          type="primary"
           :disabled="isLoading || !newMessage.trim() || userQuestions <= 0"
+          :loading="isLoading"
+          native-type="submit"
         >
-          ارسال
-        </button>
-      </form>
-    </div>
+          {{ t('chat.send') }}
+        </el-button>
+      </el-form>
+    </el-footer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { useMathJax } from 'mathjax-vue3'
-import { useAuthStore } from '@/stores/auth'
+import { useI18n } from 'vue-i18n'
+import { ElMessage } from 'element-plus'
+import katex from 'katex'
 
+const props = defineProps<{
+  sessionId: number | null
+  subject?: string
+  chapter?: string
+}>()
+
+const { t } = useI18n()
 const route = useRoute()
-const authStore = useAuthStore()
-const { renderMath } = useMathJax()
-
-const subject = ref(route.params.subject as string || '')
-const chapter = ref(route.params.chapter as string || '')
-const messages = ref<Array<{ role: 'user' | 'assistant', content: string }>>([])
+const messagesContainer = ref<HTMLElement | null>(null)
+const messages = ref<any[]>([])
 const newMessage = ref('')
 const isLoading = ref(false)
 const userQuestions = ref(0)
-const ws = ref<WebSocket | null>(null)
-const messagesContainer = ref<HTMLElement | null>(null)
+
+const renderMath = (content: string) => {
+  try {
+    return content.replace(/\$\$(.*?)\$\$/g, (_, tex) => {
+      return katex.renderToString(tex, { displayMode: true })
+    }).replace(/\$(.*?)\$/g, (_, tex) => {
+      return katex.renderToString(tex, { displayMode: false })
+    })
+  } catch (error) {
+    console.error('Error rendering math:', error)
+    return content
+  }
+}
 
 const scrollToBottom = async () => {
   await nextTick()
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-  }
-}
-
-const connectWebSocket = () => {
-  const token = localStorage.getItem('token')
-  if (!token) return
-
-  ws.value = new WebSocket(`ws://localhost:3000/ws?token=${token}`)
-
-  ws.value.onmessage = (event) => {
-    const data = event.data.toString()
-    if (data.startsWith('M:')) {
-      const content = data.slice(2)
-      if (messages.value.length > 0 && messages.value[messages.value.length - 1].role === 'assistant') {
-        messages.value[messages.value.length - 1].content += content
-      } else {
-        messages.value.push({ role: 'assistant', content })
-      }
-      scrollToBottom()
-    } else if (data.startsWith('E:')) {
-      const error = data.slice(2)
-      alert(error)
-      isLoading.value = false
-    } else if (data.startsWith('A:')) {
-      isLoading.value = false
-      scrollToBottom()
-    }
-  }
-
-  ws.value.onclose = () => {
-    setTimeout(connectWebSocket, 1000)
   }
 }
 
@@ -111,46 +99,84 @@ const sendMessage = async () => {
   const message = newMessage.value
   newMessage.value = ''
   messages.value.push({ role: 'user', content: message })
-  isLoading.value = true
-  scrollToBottom()
+  await scrollToBottom()
 
-  if (ws.value?.readyState === WebSocket.OPEN) {
-    ws.value.send(JSON.stringify({
-      question: message,
-      subject: subject.value,
-      chapter: chapter.value
-    }))
+  isLoading.value = true
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        message,
+        sessionId: props.sessionId,
+        subject: props.subject,
+        chapter: props.chapter
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to send message')
+    }
+
+    const data = await response.json()
+    messages.value.push({ role: 'assistant', content: data.response })
+    userQuestions.value = data.remainingQuestions
+    await scrollToBottom()
+  } catch (error) {
+    console.error('Error sending message:', error)
+    ElMessage.error(t('errors.sendFailed'))
+  } finally {
+    isLoading.value = false
   }
 }
 
-const loadUserInfo = async () => {
+const loadMessages = async () => {
+  if (!props.sessionId) return
+
   try {
-    const response = await fetch('/api/user/profile', {
+    const response = await fetch(`/api/chat/sessions/${props.sessionId}/messages`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     })
+
+    if (!response.ok) {
+      throw new Error('Failed to load messages')
+    }
+
     const data = await response.json()
-    userQuestions.value = data.usrQuestions
+    messages.value = data.messages
+    userQuestions.value = data.remainingQuestions
+    await scrollToBottom()
   } catch (error) {
-    console.error('Error loading user info:', error)
+    console.error('Error loading messages:', error)
+    ElMessage.error(t('errors.loadFailed'))
   }
 }
 
 onMounted(() => {
-  connectWebSocket()
-  loadUserInfo()
+  loadMessages()
 })
 
 onUnmounted(() => {
-  if (ws.value) {
-    ws.value.close()
-  }
+  messages.value = []
 })
 </script>
 
-<style>
-.prose {
-  max-width: none;
+<style scoped>
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 </style> 
