@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col md:flex-row min-h-screen bg-gray-50">
+  <div class="flex flex-col md:flex-row">
     <!-- Sidebar for chat sessions/history -->
     <el-aside width="300px" class="bg-white border-r shadow-sm p-4 hidden md:block">
       <h2 class="text-lg font-bold mb-4">{{ $t('chat.sessions') }}</h2>

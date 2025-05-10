@@ -5,7 +5,7 @@
       <div
         v-for="book in books"
         :key="book.id"
-        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 text-center cursor-pointer transition-all duration-200 hover:shadow-lg"
+        class="rounded-lg shadow-sm p-6 text-center cursor-pointer transition-all duration-200 hover:shadow-lg"
         @click="$router.push(`/book/${book.id}`)"
       >
         <div class="relative">

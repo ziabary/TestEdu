@@ -6,7 +6,7 @@
       <div
         v-for="pkg in packages"
         :key="pkg.id"
-        class="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
+        class="rounded-lg shadow p-6"
       >
         <div class="text-center">
           <h3 class="text-xl font-bold mb-2">{{ pkg.name }}</h3>

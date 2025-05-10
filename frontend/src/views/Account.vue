@@ -1,43 +1,6 @@
 <template>
-  <div class="p-4">
-    <h1 class="text-2xl font-bold mb-4">حساب کاربری</h1>
-
-    <!-- Balance -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-8">
-      <h2 class="text-xl font-bold mb-4">موجودی</h2>
-      <div class="text-center">
-        <p class="text-4xl font-bold text-blue-600">{{ formatCurrency(balance) }}</p>
-        <p class="text-gray-500">تعداد سؤال باقی‌مانده: {{ remainingQuestions }}</p>
-      </div>
-    </div>
-
-    <!-- Transaction History -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-8">
-      <h2 class="text-xl font-bold mb-4">تاریخچه تراکنش‌ها</h2>
-      <div class="space-y-4">
-        <div
-          v-for="invoice in invoices"
-          :key="invoice.id"
-          class="p-4 border-b border-gray-200 dark:border-gray-700 last:border-0"
-        >
-          <div class="flex justify-between items-center">
-            <div>
-              <p class="font-semibold">{{ invoice.title }}</p>
-              <p class="text-sm text-gray-500">{{ jalaliDate(invoice.date) }}</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <span :class="[invoice.type === 'purchase' ? 'text-blue-600' : 'text-red-600']">
-                {{ formatCurrency(invoice.amount) }}
-              </span>
-              <span class="text-gray-500">/{{ invoice.questions }} سؤال</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Purchase History -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+  <div>
+    <div class="rounded-lg shadow p-4">
       <h2 class="text-xl font-bold mb-4">تاریخچه خریدها</h2>
       <div class="space-y-4">
         <div

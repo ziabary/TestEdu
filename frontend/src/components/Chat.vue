@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-screen bg-gray-50">
+  <div class="flex flex-col h-full">
     <!-- Header -->
     <el-header class="bg-white shadow-sm p-4">
       <h1 class="text-xl font-bold text-gray-900">{{ subject }} - {{ chapter }}</h1>

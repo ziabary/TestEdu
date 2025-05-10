@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import Exercises from '@/views/Exercises.vue'
+import Exercise from '@/views/Exercise.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -10,10 +12,9 @@ const router = createRouter({
       component: () => import('@/views/Home.vue')
     },
     {
-      path: '/book',
-      name: 'book',
-      component: () => import('@/views/Book.vue'),
-      meta: { requiresAuth: true }
+      path: '/books/:grade',
+      name: 'books',
+      component: () => import('@/views/Books.vue')
     },
     {
       path: '/practice',
@@ -56,6 +57,45 @@ const router = createRouter({
       name: 'admin',
       component: () => import('@/views/Admin.vue'),
       meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+      path: '/exercises/:grade/:subject',
+      name: 'exercises',
+      component: Exercises,
+      meta: {
+        requiresAuth: false
+      }
+    },
+    {
+      path: '/exercises/:grade/:subject/fromBook/:id',
+      name: 'exercise',
+      component: Exercise,
+      meta: {
+        requiresAuth: false
+      }
+    },
+    {
+      path: '/exam/:grade/:subject',
+      name: 'exam',
+      component: () => import('@/views/Exam.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/exercises/:grade/:subject/:chapterId/overall',
+      name: 'chapter-overall-exercises',
+      component: Exercises,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/exercises/:grade/:subject/:chapterId.:subchapterId',
+      name: 'subchapter-exercises',
+      component: Exercises,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('@/views/NotFound.vue')
     }
   ]
 })

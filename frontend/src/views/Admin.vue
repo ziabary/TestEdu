@@ -7,7 +7,7 @@
         </button>
     </div>
 
-    <aside :class="[isSidebarOpen ? 'block' : 'hidden', 'md:block', 'w-64', 'bg-white', 'dark:bg-gray-800', 'fixed', 'h-full', 'border-r', 'border-gray-200', 'dark:border-gray-700']">
+    <aside :class="[isSidebarOpen ? 'block' : 'hidden', 'md:block', 'w-64', 'fixed', 'h-full', 'border-r', 'border-gray-200', 'dark:border-gray-700']">
       <div class="p-4">
         <h2 class="text-xl font-bold mb-4">پنل مدیریت</h2>
         <nav class="space-y-2">
